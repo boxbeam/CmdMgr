@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,10 +38,7 @@ public class Command {
 	private Map<String, TypeProvider<?>> providers = new HashMap<>();
 	private boolean hideSub;
 	
-	
-	/** Create a new Command. Used internally; see Command.fromStream. Do not use this constructor.
-	 */
-	public Command(String[] names, String permission, String help, String users, String hook, boolean hideSub, CommandArgument... args) {
+	private Command(String[] names, String permission, String help, String users, String hook, boolean hideSub, CommandArgument... args) {
 		this.hideSub = hideSub;
 		this.names = names;
 		this.permission = permission;
@@ -267,19 +265,23 @@ public class Command {
 		if (this.args.length >= args.length) {
 			CommandArgument arg = this.args[args.length - 1];
 			if (arg.getType() == CommandArgumentType.CUSTOM) {
-				for (TypeProvider<?> provider : this.providers.values()) {
-					System.out.println(provider.getName());
-				}
 				completions.addAll(arg.getProvider(Command.this).complete(args[args.length - 1], sender));
 			}
 		}
+		String finalArg = args[args.length - 1].toLowerCase().trim();
 		if (args.length == 1) {
 			for (Command command : children) {
 				if (command.tempName == null) {
 					completions.add(command.getPrimaryName());
 				}
+				if (!args[args.length - 1].equals("")) {
+					Arrays.stream(command.getNames()).filter((s) -> s.startsWith(finalArg) && !(command.getPrimaryName().startsWith(finalArg) && !command.getPrimaryName().equals(finalArg)) && !completions.contains(s)).forEach(completions::add);
+				}
 			}
-			completions.stream().filter((s) -> s == null || !s.toLowerCase().startsWith(args[args.length - 1].toLowerCase().trim())).forEach(completions::remove);
+			completions.stream().filter((s) -> s == null || !s.toLowerCase().startsWith(finalArg)).forEach(completions::remove);
+			if (hasName(finalArg)) {
+				Arrays.stream(names).forEach(completions::add);
+			}
 		}
 		if (completions.size() > 0) {
 			return completions;
