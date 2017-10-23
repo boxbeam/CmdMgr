@@ -1,0 +1,3 @@
+name: CmdMgr
+main: redempt.cmdmgr.CommandManager
+version: 1.0

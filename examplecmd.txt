@@ -1,0 +1,93 @@
+cmdname,alias {
+	//Define a command.
+	//This command will have no hook, permission, help, or user specification.
+	//That means that running it will just show the auto-generated help page.
+	//Aliases are separated by commas. This command would be accessible with both /cmdname and /alias. This also applies to subcommands.
+	subcommand {
+		hook subCommand
+		help Runs the subcommand
+		permission plugin.permission.node
+		users everyone
+		//Hooks into an annotated method with the @CommandHook("subCommand")
+		//Register the listener with Command#register(prefix, listener);
+		//"help Runs the subcommand" sets the description of this command to "Runs the subcommand".
+		//This will show up on the help page.
+		//"permission plugin.permission.node" sets the node required to use this command.
+		//The command will not appear in the help menu to anyone who does not have permission to use it.
+		//"users everyone" means that all senders can use this command.
+		//Other options are "player" or "console". If this field is omitted, it will assume "everyone".
+	}
+	dostuff string:arg {
+		hook doStuff
+		help Does stuff
+		permission plugin.permission.dostuff.node
+		users player
+		//See ExampleListener.java for an example listener method for this subcommand
+		//string:arg defines an argument of the type string (valid types are string, int, double, and multistring)
+		//multistring captures all arguments after it
+		//The argument has the name "arg". This shows up in the help screen, but the argument in the method can have any name.
+		//"arg" will be passed to the listener method when the command is run.
+		//If the sender puts in an invalid type or uses the wrong number of arguments, they will be shown the help page.
+	}
+	data *string:name int:_ {
+		hook rename
+		help Renames something
+		permission stuff.stuff
+		users player
+		//Putting a * before the type on an argument for a command will make it omit the type in the help page: <name>
+		//Arguments are represented as <type:name> except in special cases.
+		//Putting _ as the name will omit the name in the help page: <type>
+	}
+	tp world:_ {
+		hook tpWorld
+		help Teleports you to a world
+		permission plugin.tpworld
+		users player
+		//Note: World is not a type provided by default with CmdMgr.
+		//In this case, world is meant to represent a type made available by a TypeProvider.
+	}
+	coins {
+		help See how many coins you have
+		hook getCoins
+		users player
+		permission plugin.coins
+		_ *int:amount {
+			help Set how many coins you have
+			users player
+			permission plugin.setcoins
+			hook setCoins
+			//This command is named _
+			//Naming a command _ makes it the same as the parent command, but potentially with different arguments.
+			//For example, "/cmd coins" would show you how many coins you have, and "/cmd coins 10" would set your coins to 10.
+			//In the help page, this is also how it is shown. It is only called _ internally, there is no indicator of this externally.
+		}
+	}
+	world {
+		hidesub
+		//The hidesub tag makes all subcommands of this command get hidden in the help page.
+		//This is to prevent mile-long help pages.
+		//If a player wanted to see the help page for only this subcommand, they would do "/cmd world".
+		//The help message defaults to "Subcommands hidden" unless otherwise specified with this flag.
+		create *string:name {
+			help Creates a new world
+			hook worldGen
+			users everyone
+			permission plugin.createworld
+			//Subcommand of /cmd world
+		}
+		delete *string:name {
+			help Deletes a world
+			hook delWorld
+			users everyone
+			permission plugin.delworld
+			//Subcommand of /cmd world
+		}
+		clone *string:original *string:new {
+			help Duplicates an existing world
+			hook cloneWorld
+			users everyone
+			permission plugin.cloneworld
+			//Subcommand of /cmd world
+		}
+	}
+}
