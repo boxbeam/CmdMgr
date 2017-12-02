@@ -37,6 +37,7 @@ public class Command {
 	private Object listener = null;
 	private Map<String, TypeProvider<?>> providers = new HashMap<>();
 	private boolean hideSub;
+	private int lineNum = 0;
 	
 	private Command(String[] names, String permission, String help, String users, String hook, boolean hideSub, CommandArgument... args) {
 		this.hideSub = hideSub;
@@ -265,7 +266,7 @@ public class Command {
 		if (this.args.length >= args.length) {
 			CommandArgument arg = this.args[args.length - 1];
 			if (arg.getType() == CommandArgumentType.CUSTOM) {
-				completions.addAll(arg.getProvider(Command.this).complete(args[args.length - 1], sender));
+				completions.addAll(arg.getProvider(Command.this).complete(args[args.length - 1].toLowerCase().trim(), sender));
 			}
 		}
 		String finalArg = args[args.length - 1].toLowerCase().trim();
@@ -275,7 +276,7 @@ public class Command {
 					completions.add(command.getPrimaryName());
 				}
 				if (!args[args.length - 1].equals("")) {
-					Arrays.stream(command.getNames()).filter((s) -> s.startsWith(finalArg) && !(command.getPrimaryName().startsWith(finalArg) && !command.getPrimaryName().equals(finalArg)) && !completions.contains(s)).forEach(completions::add);
+					Arrays.stream(command.getNames()).filter((s) -> s.toLowerCase().startsWith(finalArg) && !(command.getPrimaryName().toLowerCase().startsWith(finalArg) && !command.getPrimaryName().equals(finalArg)) && !completions.contains(s)).forEach(completions::add);
 				}
 			}
 			completions.stream().filter((s) -> s == null || !s.toLowerCase().startsWith(finalArg)).forEach(completions::remove);
@@ -437,6 +438,24 @@ public class Command {
 	 * @return A Command which represents the information from the stream
 	 * @throws IOException
 	 */
+	public static List<Command> fromStreamMulti(InputStream stream) throws IOException {
+		if (stream == null) {
+			throw new IllegalArgumentException("Stream cannot be null");
+		}
+		InputStreamReader read = new InputStreamReader(stream);
+		BufferedReader reader = new BufferedReader(read);
+		String combine = "";
+		String line = "";
+		try {
+			while ((line = reader.readLine()) != null) {
+				combine += line + "\n";
+			}	
+		} catch (EOFException e) {
+		}
+		reader.close();
+		return fromString(combine);
+	}
+	
 	public static Command fromStream(InputStream stream) throws IOException {
 		if (stream == null) {
 			throw new IllegalArgumentException("Stream cannot be null");
@@ -452,10 +471,10 @@ public class Command {
 		} catch (EOFException e) {
 		}
 		reader.close();
-		return fromString(combine, 0);
+		return fromStringSingle(combine, 0);
 	}
 	
-	private static Command fromString(String string, int lineNumber) {
+	private static Command fromStringSingle(String string, int lineNumber) {
 		String[] split = string.split("\n");
 		String[] names = null;
 		String permission = null;
@@ -481,7 +500,7 @@ public class Command {
 						args[i - 1] = new CommandArgument(argSplit[0], argSplit[1]);
 					}
 				} else if (depth == 2) {
-					children.add(fromString(string, lineIter));
+					children.add(fromStringSingle(string, lineIter));
 				}
 			}
 			if (line.equals("}")) {
@@ -494,6 +513,7 @@ public class Command {
 					for (Command child : children) {
 						command.addChild(child);
 					}
+					command.lineNum = lineIter;
 					return command;
 				}
 			}
@@ -516,6 +536,17 @@ public class Command {
 			}
 		}
 		return null;
+	}
+	
+	private static List<Command> fromString(String string) {
+		List<Command> all = new ArrayList<>();
+		Command command;
+		int lineNum = 0;
+		while ((command = fromStringSingle(string, lineNum)) != null) {
+			all.add(command);
+			lineNum = command.lineNum + 1;
+		}
+		return all;
 	}
 	
 	/**
